@@ -71,7 +71,7 @@ jobs:
       BUILD_CLAP: ON
       BUILD_IMGUI_UI: OFF
       BUILD_EFFECT: OFF
-      HC_EMBEDDED_WASM: OFF
+      HC_EMBED_WASM: OFF
 
     steps:
       - name: Checkout repository
@@ -94,7 +94,7 @@ jobs:
             -DBUILD_CLAP=${{ env.BUILD_CLAP }} \
             -DBUILD_IMGUI_UI=${{ env.BUILD_IMGUI_UI }} \
             -DBUILD_EFFECT=${{ env.BUILD_EFFECT }} \
-            -DHC_EMBED_WASM=${{ env.HC_EMBEDDED_WASM }}
+            -DHC_EMBED_WASM=${{ env.HC_EMBED_WASM }}
 
       - name: Build plugin
         shell: bash
