@@ -71,7 +71,7 @@ jobs:
       BUILD_CLAP: ON
       BUILD_IMGUI_UI: OFF
       BUILD_EFFECT: OFF
-      HC_EMBEDDED_WASM: ON
+      HC_EMBEDDED_WASM: OFF
 
     steps:
       - name: Checkout repository
