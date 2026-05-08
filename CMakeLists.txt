@@ -79,7 +79,7 @@ if(HC_EMBED_WASM)
     endif()
     
     # Add compile definition for embedded mode
-    target_compile_definitions(hypercollider_core PRIVATE HC_EMBEDDED_WASM=1)
+    add_compile_definitions(HC_EMBEDDED_WASM=1)
 endif()
 
 # Fetch dependencies
