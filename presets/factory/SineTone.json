@@ -1,0 +1,6 @@
+{
+  "name": "SineTone",
+  "code": "{ SinOsc.ar(440, 0, 0.2) ! 2 }.play",
+  "synthDefName": "SineTone",
+  "createdAt": 0
+}

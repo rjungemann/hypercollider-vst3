@@ -1,0 +1,129 @@
+name: Plugin Build
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS arm64 (Apple Silicon)
+          - os: macos-14
+            target: hypercollider_instrument
+            build_type: Release
+            artifact_name: hcplugin-vst3-macos-arm64
+            component: vst3_instrument
+          - os: macos-14
+            target: hypercollider_clap
+            build_type: Release
+            artifact_name: hcplugin-clap-macos-arm64
+            component: clap
+            
+          # macOS x86_64 (Intel)
+          - os: macos-13
+            target: hypercollider_instrument
+            build_type: Release
+            artifact_name: hcplugin-vst3-macos-x86_64
+            component: vst3_instrument
+          - os: macos-13
+            target: hypercollider_clap
+            build_type: Release
+            artifact_name: hcplugin-clap-macos-x86_64
+            component: clap
+          
+          # Windows x86_64
+          - os: windows-2022
+            target: hypercollider_instrument
+            build_type: Release
+            artifact_name: hcplugin-vst3-win-x64
+            component: vst3_instrument
+          - os: windows-2022
+            target: hypercollider_clap
+            build_type: Release
+            artifact_name: hcplugin-clap-win-x64
+            component: clap
+          
+          # Linux x86_64
+          - os: ubuntu-22.04
+            target: hypercollider_instrument
+            build_type: Release
+            artifact_name: hcplugin-vst3-linux-x64
+            component: vst3_instrument
+          - os: ubuntu-22.04
+            target: hypercollider_clap
+            build_type: Release
+            artifact_name: hcplugin-clap-linux-x64
+            component: clap
+
+    env:
+      BUILD_CLAP: ON
+      BUILD_IMGUI_UI: OFF
+      BUILD_EFFECT: OFF
+      HC_EMBEDDED_WASM: ON
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake g++ libx11-dev libxcb-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DBUILD_CLAP=${{ env.BUILD_CLAP }} \
+            -DBUILD_IMGUI_UI=${{ env.BUILD_IMGUI_UI }} \
+            -DBUILD_EFFECT=${{ env.BUILD_EFFECT }} \
+            -DHC_EMBEDDED_WASM=${{ env.HC_EMBEDDED_WASM }}
+
+      - name: Build plugin
+        run: cmake --build build -j$(nproc) --target ${{ matrix.target }}
+
+      - name: Package artifact
+        run: |
+          mkdir -p artifact
+          if [ "${{ runner.os }}" == "macOS" ]; then
+            if [ "${{ matrix.component }}" == "clap" ]; then
+              cp -R build/CLAP/${{ matrix.build_type }}/*.clap artifact/ || true
+            elif [ "${{ matrix.component }}" == "vst3_instrument" ]; then
+              cp -R build/VST3/${{ matrix.build_type }}/*/*.vst3 artifact/ || true
+            fi
+          elif [ "${{ runner.os }}" == "Windows" ]; then
+            if [ "${{ matrix.component }}" == "clap" ]; then
+              cp build/CLAP/${{ matrix.build_type }}/*.clap artifact/ || true
+            elif [ "${{ matrix.component }}" == "vst3_instrument" ]; then
+              cp -R build/VST3/${{ matrix.build_type }}/*/*.vst3 artifact/ || true
+            fi
+          else
+            if [ "${{ matrix.component }}" == "clap" ]; then
+              cp build/CLAP/${{ matrix.build_type }}/*.clap artifact/ || true
+            elif [ "${{ matrix.component }}" == "vst3_instrument" ]; then
+              cp -R build/VST3/${{ matrix.build_type }}/*/*.vst3 artifact/ || true
+            fi
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: artifact/
+          compression-level: 9

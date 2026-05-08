@@ -1,0 +1,6 @@
+{
+  "name": "FMBass",
+  "code": "{ SinOsc.ar([440, 441], 0, 0.2) ! 2 }.play",
+  "synthDefName": "FMBass",
+  "createdAt": 0
+}
