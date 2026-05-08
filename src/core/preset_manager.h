@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <optional>
 
 namespace HCPlugin {
 
