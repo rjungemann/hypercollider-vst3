@@ -299,7 +299,7 @@ target_link_libraries(hypercollider_core
 )
 
 # Platform-specific linking for WAMR
-target_link_libraries(hypercollider_core PRIVATE pthread dl m)
+target_link_libraries(hypercollider_core PRIVATE pthread ${CMAKE_DL_LIBS} m)
 
 if(APPLE)
     target_link_libraries(hypercollider_core PRIVATE "-framework Foundation")
