@@ -164,12 +164,10 @@ void HCLangEngine::render(const float* inputL, const float* inputR,
     }
 
     // Call render
-    wasm_val_t args[1] = { wasm_val_t{ .of.i32 = static_cast<int32_t>(nframes) } };
-
-    if (!wasm_runtime_call_wasm_v(m_synth.get_exec_env(), renderFn,
-                                  0, nullptr, 1, args)) {
+    if (!m_synth.call(kHcWasmRender, 0, nullptr, static_cast<int32_t>(nframes))) {
         const char* exc = wasm_runtime_get_exception(m_synth.get_instance());
-        postLogLine(std::string("Render failed: ") + (exc ? exc : "unknown"), true);
+        const std::string err = m_synth.get_error();
+        postLogLine(std::string("Render failed: ") + (err.empty() ? (exc ? exc : "unknown") : err), true);
         m_synth.wasm_free(wasmPtr);
         std::memset(outputL, 0, nframes * sizeof(float));
         if (outputR) std::memset(outputR, 0, nframes * sizeof(float));
@@ -215,15 +213,12 @@ void HCLangEngine::evaluate(std::string_view code) {
     static_cast<char*>(nativeCodePtr)[codeSize] = '\0';
 
     // Call evaluate
-    wasm_val_t args[2] = {
-        wasm_val_t{ .of.i32 = static_cast<int32_t>(wasmCodePtr) },
-        wasm_val_t{ .of.i32 = static_cast<int32_t>(codeSize) }
-    };
-
-    if (!wasm_runtime_call_wasm_v(m_lang.get_exec_env(), evalFn,
-                                  0, nullptr, 2, args)) {
+    if (!m_lang.call(kHcWasmEvalString, 0, nullptr,
+                     static_cast<int32_t>(wasmCodePtr),
+                     static_cast<int32_t>(codeSize))) {
         const char* exc = wasm_runtime_get_exception(m_lang.get_instance());
-        postLogLine(std::string("Eval failed: ") + (exc ? exc : "unknown"), true);
+        const std::string err = m_lang.get_error();
+        postLogLine(std::string("Eval failed: ") + (err.empty() ? (exc ? exc : "unknown") : err), true);
     } else {
         postLogLine(std::string("Evaluated: ") + std::string(code));
     }
