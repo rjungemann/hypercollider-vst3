@@ -79,7 +79,7 @@ if(HC_EMBED_WASM)
     endif()
     
     # Add compile definition for embedded mode
-    target_compile_definitions(hypercollider_core PRIVATE HC_EMBEDDED_WASM=1)
+    add_compile_definitions(HC_EMBEDDED_WASM=1)
 endif()
 
 # Fetch dependencies
@@ -128,6 +128,7 @@ set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_AUV2_BUILDS OFF CACHE BOOL "" FORCE)
+set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
     vst3sdk

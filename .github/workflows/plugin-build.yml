@@ -71,7 +71,7 @@ jobs:
       BUILD_CLAP: ON
       BUILD_IMGUI_UI: OFF
       BUILD_EFFECT: OFF
-      HC_EMBEDDED_WASM: ON
+      HC_EMBED_WASM: OFF
 
     steps:
       - name: Checkout repository
@@ -83,9 +83,10 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake g++ libx11-dev libxcb-dev
+          sudo apt-get install -y ninja-build cmake g++ libx11-dev libxcb1-dev
 
       - name: Configure CMake
+        shell: bash
         run: |
           cmake -B build \
             -G Ninja \
@@ -93,12 +94,14 @@ jobs:
             -DBUILD_CLAP=${{ env.BUILD_CLAP }} \
             -DBUILD_IMGUI_UI=${{ env.BUILD_IMGUI_UI }} \
             -DBUILD_EFFECT=${{ env.BUILD_EFFECT }} \
-            -DHC_EMBEDDED_WASM=${{ env.HC_EMBEDDED_WASM }}
+            -DHC_EMBED_WASM=${{ env.HC_EMBED_WASM }}
 
       - name: Build plugin
+        shell: bash
         run: cmake --build build -j$(nproc) --target ${{ matrix.target }}
 
       - name: Package artifact
+        shell: bash
         run: |
           mkdir -p artifact
           if [ "${{ runner.os }}" == "macOS" ]; then

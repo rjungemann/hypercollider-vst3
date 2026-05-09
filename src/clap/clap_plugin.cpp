@@ -266,7 +266,7 @@ bool ClapPlugin::getParamInfo(uint32_t index, clap_param_info_t* info) const {
 
 double ClapPlugin::getParamValue(uint32_t index) const {
     switch (index) {
-        case 0: return 20.0f * std::log10f(m_masterVolume + 0.0001f);
+        case 0: return 20.0f * std::log10(m_masterVolume + 0.0001f);
         case 1: return m_bypass ? 1.0 : 0.0;
         default: return 0.0;
     }
