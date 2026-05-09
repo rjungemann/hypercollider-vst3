@@ -93,6 +93,11 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set(WAMR_DISABLE_HW_BOUND_CHECK 1 CACHE STRING
+        "Disable WAMR hardware bound checks for MinGW compatibility" FORCE)
+    message(STATUS "Configuring WAMR with hardware bound checks disabled for MinGW compatibility")
+endif()
 FetchContent_MakeAvailable(wamr)
 
 if(WIN32)
@@ -180,10 +185,6 @@ set(WAMR_BUILD_FAST_INTERP 1)
 set(WAMR_BUILD_LIBC_WASI 1)
 set(WAMR_BUILD_LIBC_BUILTIN 1)
 set(WAMR_BUILD_SHARED_MEMORY 0)
-if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    set(WAMR_DISABLE_HW_BOUND_CHECK 1)
-    message(STATUS "Disabling WAMR hardware bound checks for MinGW compatibility")
-endif()
 
 # Include WAMR runtime lib cmake to get the sources
 include(${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
