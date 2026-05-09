@@ -207,6 +207,28 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(vst3sdk)
 smtg_enable_vst3_sdk()
 
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set(VST3_ALIGNED_ALLOC_FILE
+        "${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/utility/alignedalloc.h")
+    if(EXISTS "${VST3_ALIGNED_ALLOC_FILE}")
+        file(READ "${VST3_ALIGNED_ALLOC_FILE}" VST3_ALIGNED_ALLOC_CONTENTS)
+        set(VST3_ALIGNED_ALLOC_PATTERN "#elif defined(_MSC_VER)")
+        string(FIND "${VST3_ALIGNED_ALLOC_CONTENTS}" "${VST3_ALIGNED_ALLOC_PATTERN}"
+               VST3_ALIGNED_ALLOC_PATTERN_POS)
+        if(NOT VST3_ALIGNED_ALLOC_PATTERN_POS EQUAL -1)
+            string(REPLACE
+                   "${VST3_ALIGNED_ALLOC_PATTERN}"
+                   "#elif defined(_MSC_VER) || defined(__MINGW32__)"
+                   VST3_ALIGNED_ALLOC_PATCHED_CONTENTS
+                   "${VST3_ALIGNED_ALLOC_CONTENTS}")
+            if(NOT VST3_ALIGNED_ALLOC_PATCHED_CONTENTS STREQUAL VST3_ALIGNED_ALLOC_CONTENTS)
+                file(WRITE "${VST3_ALIGNED_ALLOC_FILE}" "${VST3_ALIGNED_ALLOC_PATCHED_CONTENTS}")
+                message(STATUS "Applied VST3SDK MinGW aligned_alloc workaround")
+            endif()
+        endif()
+    endif()
+endif()
+
 # nlohmann_json for preset management
 FetchContent_Declare(
     nlohmann_json
