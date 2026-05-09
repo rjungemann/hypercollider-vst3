@@ -180,6 +180,10 @@ set(WAMR_BUILD_FAST_INTERP 1)
 set(WAMR_BUILD_LIBC_WASI 1)
 set(WAMR_BUILD_LIBC_BUILTIN 1)
 set(WAMR_BUILD_SHARED_MEMORY 0)
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set(WAMR_DISABLE_HW_BOUND_CHECK 1)
+    message(STATUS "Disabling WAMR hardware bound checks for MinGW compatibility")
+endif()
 
 # Include WAMR runtime lib cmake to get the sources
 include(${WAMR_ROOT_DIR}/build-scripts/runtime_lib.cmake)
