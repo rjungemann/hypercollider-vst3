@@ -95,6 +95,48 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(wamr)
 
+if(WIN32)
+    set(WAMR_WIN_FILE "${wamr_SOURCE_DIR}/core/shared/platform/windows/win_file.c")
+    if(EXISTS "${WAMR_WIN_FILE}")
+        file(READ "${WAMR_WIN_FILE}" WAMR_WIN_FILE_CONTENTS)
+        set(WAMR_WIN_FILE_PATCHED_CONTENTS "${WAMR_WIN_FILE_CONTENTS}")
+
+        string(REPLACE "// Starts with \\??\\ "
+                       "/* Starts with NT path prefix */"
+                       WAMR_WIN_FILE_PATCHED_CONTENTS
+                       "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+        string(REPLACE "// Starts with \\??\\"
+                       "/* Starts with NT path prefix */"
+                       WAMR_WIN_FILE_PATCHED_CONTENTS
+                       "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+        string(REPLACE "// \\??\\<drive>:\\ "
+                       "/* Drive-letter path form */"
+                       WAMR_WIN_FILE_PATCHED_CONTENTS
+                       "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+        string(REPLACE "// \\??\\<drive>:\\"
+                       "/* Drive-letter path form */"
+                       WAMR_WIN_FILE_PATCHED_CONTENTS
+                       "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+        string(REPLACE
+               "// \\??\\UNC\\<server>\\<share>\\ - make sure the final path looks like \\\\<server>\\<share>\\ "
+               "/* UNC path form; keep final path in standard UNC format */"
+               WAMR_WIN_FILE_PATCHED_CONTENTS
+               "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+        string(REPLACE
+               "// \\??\\UNC\\<server>\\<share>\\ - make sure the final path looks like \\\\<server>\\<share>\\"
+               "/* UNC path form; keep final path in standard UNC format */"
+               WAMR_WIN_FILE_PATCHED_CONTENTS
+               "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+        if(NOT WAMR_WIN_FILE_PATCHED_CONTENTS STREQUAL WAMR_WIN_FILE_CONTENTS)
+            file(WRITE "${WAMR_WIN_FILE}" "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+            message(STATUS "Applied Windows MinGW comment workaround to WAMR win_file.c")
+        endif()
+    endif()
+endif()
+
 # Set WAMR build options
 set(WAMR_ROOT_DIR "${wamr_SOURCE_DIR}")
 
