@@ -212,19 +212,18 @@ if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
         "${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/utility/alignedalloc.h")
     if(EXISTS "${VST3_ALIGNED_ALLOC_FILE}")
         file(READ "${VST3_ALIGNED_ALLOC_FILE}" VST3_ALIGNED_ALLOC_CONTENTS)
+        set(VST3_PATTERN_NOT_FOUND -1)
         set(VST3_ALIGNED_ALLOC_PATTERN "#elif defined(_MSC_VER)")
         string(FIND "${VST3_ALIGNED_ALLOC_CONTENTS}" "${VST3_ALIGNED_ALLOC_PATTERN}"
                VST3_ALIGNED_ALLOC_PATTERN_POS)
-        if(NOT VST3_ALIGNED_ALLOC_PATTERN_POS EQUAL -1)
+        if(NOT VST3_ALIGNED_ALLOC_PATTERN_POS EQUAL VST3_PATTERN_NOT_FOUND)
             string(REPLACE
                    "${VST3_ALIGNED_ALLOC_PATTERN}"
                    "#elif defined(_MSC_VER) || defined(__MINGW32__)"
                    VST3_ALIGNED_ALLOC_PATCHED_CONTENTS
                    "${VST3_ALIGNED_ALLOC_CONTENTS}")
-            if(NOT VST3_ALIGNED_ALLOC_PATCHED_CONTENTS STREQUAL VST3_ALIGNED_ALLOC_CONTENTS)
-                file(WRITE "${VST3_ALIGNED_ALLOC_FILE}" "${VST3_ALIGNED_ALLOC_PATCHED_CONTENTS}")
-                message(STATUS "Applied VST3SDK MinGW aligned_alloc workaround")
-            endif()
+            file(WRITE "${VST3_ALIGNED_ALLOC_FILE}" "${VST3_ALIGNED_ALLOC_PATCHED_CONTENTS}")
+            message(STATUS "Applied VST3SDK MinGW aligned_alloc workaround")
         endif()
     endif()
 endif()
