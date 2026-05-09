@@ -99,40 +99,59 @@ if(WIN32)
     set(WAMR_WIN_FILE "${wamr_SOURCE_DIR}/core/shared/platform/windows/win_file.c")
     if(EXISTS "${WAMR_WIN_FILE}")
         file(READ "${WAMR_WIN_FILE}" WAMR_WIN_FILE_CONTENTS)
-        set(WAMR_WIN_FILE_PATCHED_CONTENTS "${WAMR_WIN_FILE_CONTENTS}")
 
-        string(REPLACE "// Starts with \\??\\ "
-                       "/* Starts with NT path prefix */"
-                       WAMR_WIN_FILE_PATCHED_CONTENTS
-                       "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
-        string(REPLACE "// Starts with \\??\\"
-                       "/* Starts with NT path prefix */"
-                       WAMR_WIN_FILE_PATCHED_CONTENTS
-                       "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+        # CMake string literals need escaped backslashes, e.g. "\\??\\"
+        # matches the literal text "\??\" in win_file.c.
+        set(WAMR_WIN_COMMENT_PATTERN_1 "// Starts with \\??\\")
+        set(WAMR_WIN_COMMENT_PATTERN_2 "// \\??\\<drive>:\\")
+        set(WAMR_WIN_COMMENT_PATTERN_3
+            "// \\??\\UNC\\<server>\\<share>\\ - make sure the final path looks like \\\\<server>\\<share>\\")
 
-        string(REPLACE "// \\??\\<drive>:\\ "
-                       "/* Drive-letter path form */"
-                       WAMR_WIN_FILE_PATCHED_CONTENTS
-                       "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
-        string(REPLACE "// \\??\\<drive>:\\"
-                       "/* Drive-letter path form */"
-                       WAMR_WIN_FILE_PATCHED_CONTENTS
-                       "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+        string(FIND "${WAMR_WIN_FILE_CONTENTS}" "${WAMR_WIN_COMMENT_PATTERN_1}"
+               WAMR_WIN_FILE_PATTERN_1_POS)
+        string(FIND "${WAMR_WIN_FILE_CONTENTS}" "${WAMR_WIN_COMMENT_PATTERN_2}"
+               WAMR_WIN_FILE_PATTERN_2_POS)
+        string(FIND "${WAMR_WIN_FILE_CONTENTS}" "${WAMR_WIN_COMMENT_PATTERN_3}"
+               WAMR_WIN_FILE_PATTERN_3_POS)
 
-        string(REPLACE
-               "// \\??\\UNC\\<server>\\<share>\\ - make sure the final path looks like \\\\<server>\\<share>\\ "
-               "/* UNC path form; keep final path in standard UNC format */"
-               WAMR_WIN_FILE_PATCHED_CONTENTS
-               "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
-        string(REPLACE
-               "// \\??\\UNC\\<server>\\<share>\\ - make sure the final path looks like \\\\<server>\\<share>\\"
-               "/* UNC path form; keep final path in standard UNC format */"
-               WAMR_WIN_FILE_PATCHED_CONTENTS
-               "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+        if(WAMR_WIN_FILE_PATTERN_1_POS EQUAL -1
+           AND WAMR_WIN_FILE_PATTERN_2_POS EQUAL -1
+           AND WAMR_WIN_FILE_PATTERN_3_POS EQUAL -1)
+            string(FIND "${WAMR_WIN_FILE_CONTENTS}"
+                   "/* Starts with NT path prefix */"
+                   WAMR_WIN_FILE_ALREADY_PATCHED)
+            if(WAMR_WIN_FILE_ALREADY_PATCHED EQUAL -1)
+                message(WARNING "WAMR Windows path comments changed; MinGW workaround was not applied.")
+            endif()
+        elseif(NOT WAMR_WIN_FILE_PATTERN_1_POS EQUAL -1
+               AND NOT WAMR_WIN_FILE_PATTERN_2_POS EQUAL -1
+               AND NOT WAMR_WIN_FILE_PATTERN_3_POS EQUAL -1)
+            set(WAMR_WIN_FILE_PATCHED_CONTENTS "${WAMR_WIN_FILE_CONTENTS}")
 
-        if(NOT WAMR_WIN_FILE_PATCHED_CONTENTS STREQUAL WAMR_WIN_FILE_CONTENTS)
-            file(WRITE "${WAMR_WIN_FILE}" "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
-            message(STATUS "Applied Windows MinGW comment workaround to WAMR win_file.c")
+            string(REPLACE "${WAMR_WIN_COMMENT_PATTERN_1}"
+                           "/* Starts with NT path prefix */"
+                           WAMR_WIN_FILE_PATCHED_CONTENTS
+                           "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+            string(REPLACE "${WAMR_WIN_COMMENT_PATTERN_2}"
+                           "/* Drive-letter path form */"
+                           WAMR_WIN_FILE_PATCHED_CONTENTS
+                           "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+            string(REPLACE
+                   "${WAMR_WIN_COMMENT_PATTERN_3}"
+                   "/* UNC path form; keep final path in standard UNC format */"
+                   WAMR_WIN_FILE_PATCHED_CONTENTS
+                   "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+            if(NOT WAMR_WIN_FILE_PATCHED_CONTENTS STREQUAL WAMR_WIN_FILE_CONTENTS)
+                file(WRITE "${WAMR_WIN_FILE}" "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+                message(STATUS "Applied Windows MinGW comment workaround to WAMR win_file.c")
+            else()
+                message(WARNING "WAMR Windows path comments were detected but MinGW workaround made no changes.")
+            endif()
+        else()
+            message(WARNING "WAMR Windows path comments partially changed; MinGW workaround was not applied.")
         endif()
     endif()
 endif()
