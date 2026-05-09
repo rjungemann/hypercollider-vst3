@@ -16,7 +16,7 @@ std::filesystem::path PresetManager::getUserPresetsDir() const {
         return std::filesystem::path(home) / "Library" / "Application Support" / "HCPlugin" / "presets";
     }
 #elif defined(_WIN32)
-    // Windows: %APPDATA%\HCPlugin\presets\
+    // Windows: %APPDATA%/HCPlugin/presets/
     if (const char* appDataEnv = std::getenv("APPDATA")) {
         return std::filesystem::path(appDataEnv) / "HCPlugin" / "presets";
     }
