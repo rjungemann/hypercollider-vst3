@@ -89,7 +89,7 @@ include(FetchContent)
 FetchContent_Declare(
     wamr
     GIT_REPOSITORY https://github.com/bytecodealliance/wasm-micro-runtime.git
-    GIT_TAG WAMR-2.4.3
+    GIT_TAG WAMR-2.4.4
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
