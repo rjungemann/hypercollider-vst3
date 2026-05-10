@@ -93,7 +93,87 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set(WAMR_DISABLE_HW_BOUND_CHECK 1 CACHE STRING
+        "Disable WAMR hardware bound checks for MinGW compatibility" FORCE)
+    message(STATUS "Configuring WAMR with hardware bound checks disabled for MinGW compatibility")
+endif()
 FetchContent_MakeAvailable(wamr)
+
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU" AND TARGET vmlib)
+    get_target_property(WAMR_VMLIB_LINK_LIBS vmlib LINK_LIBRARIES)
+    if(WAMR_VMLIB_LINK_LIBS)
+        list(REMOVE_ITEM WAMR_VMLIB_LINK_LIBS "-ldl" "dl")
+        set_property(TARGET vmlib PROPERTY LINK_LIBRARIES "${WAMR_VMLIB_LINK_LIBS}")
+    endif()
+
+    get_target_property(WAMR_VMLIB_INTERFACE_LINK_LIBS vmlib INTERFACE_LINK_LIBRARIES)
+    if(WAMR_VMLIB_INTERFACE_LINK_LIBS)
+        list(REMOVE_ITEM WAMR_VMLIB_INTERFACE_LINK_LIBS "-ldl" "dl")
+        set_property(TARGET vmlib PROPERTY INTERFACE_LINK_LIBRARIES "${WAMR_VMLIB_INTERFACE_LINK_LIBS}")
+    endif()
+endif()
+
+if(WIN32)
+    set(WAMR_WIN_FILE "${wamr_SOURCE_DIR}/core/shared/platform/windows/win_file.c")
+    if(EXISTS "${WAMR_WIN_FILE}")
+        file(READ "${WAMR_WIN_FILE}" WAMR_WIN_FILE_CONTENTS)
+
+        # CMake string literals need escaped backslashes, e.g. "\\??\\"
+        # matches the literal text "\??\" in win_file.c.
+        set(WAMR_WIN_COMMENT_PATTERN_1 "// Starts with \\??\\")
+        set(WAMR_WIN_COMMENT_PATTERN_2 "// \\??\\<drive>:\\")
+        set(WAMR_WIN_COMMENT_PATTERN_3
+            "// \\??\\UNC\\<server>\\<share>\\ - make sure the final path looks like \\\\<server>\\<share>\\")
+
+        string(FIND "${WAMR_WIN_FILE_CONTENTS}" "${WAMR_WIN_COMMENT_PATTERN_1}"
+               WAMR_WIN_FILE_PATTERN_1_POS)
+        string(FIND "${WAMR_WIN_FILE_CONTENTS}" "${WAMR_WIN_COMMENT_PATTERN_2}"
+               WAMR_WIN_FILE_PATTERN_2_POS)
+        string(FIND "${WAMR_WIN_FILE_CONTENTS}" "${WAMR_WIN_COMMENT_PATTERN_3}"
+               WAMR_WIN_FILE_PATTERN_3_POS)
+
+        if(WAMR_WIN_FILE_PATTERN_1_POS EQUAL -1
+           AND WAMR_WIN_FILE_PATTERN_2_POS EQUAL -1
+           AND WAMR_WIN_FILE_PATTERN_3_POS EQUAL -1)
+            string(FIND "${WAMR_WIN_FILE_CONTENTS}"
+                   "/* Starts with NT path prefix */"
+                   WAMR_WIN_FILE_ALREADY_PATCHED)
+            if(WAMR_WIN_FILE_ALREADY_PATCHED EQUAL -1)
+                message(WARNING "WAMR Windows path comments changed; MinGW workaround was not applied.")
+            endif()
+        elseif(NOT WAMR_WIN_FILE_PATTERN_1_POS EQUAL -1
+               AND NOT WAMR_WIN_FILE_PATTERN_2_POS EQUAL -1
+               AND NOT WAMR_WIN_FILE_PATTERN_3_POS EQUAL -1)
+            set(WAMR_WIN_FILE_PATCHED_CONTENTS "${WAMR_WIN_FILE_CONTENTS}")
+
+            string(REPLACE "${WAMR_WIN_COMMENT_PATTERN_1}"
+                           "/* Starts with NT path prefix */"
+                           WAMR_WIN_FILE_PATCHED_CONTENTS
+                           "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+            string(REPLACE "${WAMR_WIN_COMMENT_PATTERN_2}"
+                           "/* Drive-letter path form */"
+                           WAMR_WIN_FILE_PATCHED_CONTENTS
+                           "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+            string(REPLACE
+                   "${WAMR_WIN_COMMENT_PATTERN_3}"
+                   "/* UNC path form; keep final path in standard UNC format */"
+                   WAMR_WIN_FILE_PATCHED_CONTENTS
+                   "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+
+            if(NOT WAMR_WIN_FILE_PATCHED_CONTENTS STREQUAL WAMR_WIN_FILE_CONTENTS)
+                file(WRITE "${WAMR_WIN_FILE}" "${WAMR_WIN_FILE_PATCHED_CONTENTS}")
+                message(STATUS "Applied Windows MinGW comment workaround to WAMR win_file.c")
+            else()
+                message(WARNING "WAMR Windows path comments were detected but MinGW workaround made no changes.")
+            endif()
+        else()
+            message(WARNING "WAMR Windows path comments partially changed; MinGW workaround was not applied.")
+        endif()
+    endif()
+endif()
 
 # Set WAMR build options
 set(WAMR_ROOT_DIR "${wamr_SOURCE_DIR}")
@@ -140,6 +220,27 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(vst3sdk)
 smtg_enable_vst3_sdk()
+
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set(VST3_ALIGNED_ALLOC_FILE
+        "${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/utility/alignedalloc.h")
+    if(EXISTS "${VST3_ALIGNED_ALLOC_FILE}")
+        file(READ "${VST3_ALIGNED_ALLOC_FILE}" VST3_ALIGNED_ALLOC_CONTENTS)
+        set(VST3_PATTERN_NOT_FOUND -1)
+        set(VST3_ALIGNED_ALLOC_PATTERN "#elif defined(_MSC_VER)")
+        string(FIND "${VST3_ALIGNED_ALLOC_CONTENTS}" "${VST3_ALIGNED_ALLOC_PATTERN}"
+               VST3_ALIGNED_ALLOC_PATTERN_POS)
+        if(NOT VST3_ALIGNED_ALLOC_PATTERN_POS EQUAL VST3_PATTERN_NOT_FOUND)
+            string(REPLACE
+                   "${VST3_ALIGNED_ALLOC_PATTERN}"
+                   "#elif defined(_MSC_VER) || defined(__MINGW32__)"
+                   VST3_ALIGNED_ALLOC_PATCHED_CONTENTS
+                   "${VST3_ALIGNED_ALLOC_CONTENTS}")
+            file(WRITE "${VST3_ALIGNED_ALLOC_FILE}" "${VST3_ALIGNED_ALLOC_PATCHED_CONTENTS}")
+            message(STATUS "Applied VST3SDK MinGW aligned_alloc workaround")
+        endif()
+    endif()
+endif()
 
 # nlohmann_json for preset management
 FetchContent_Declare(
@@ -212,7 +313,11 @@ target_link_libraries(hypercollider_core
 )
 
 # Platform-specific linking for WAMR
-target_link_libraries(hypercollider_core PRIVATE pthread dl m)
+set(HC_DL_LIBS ${CMAKE_DL_LIBS})
+if(WIN32)
+    set(HC_DL_LIBS "")
+endif()
+target_link_libraries(hypercollider_core PRIVATE pthread ${HC_DL_LIBS} m)
 
 if(APPLE)
     target_link_libraries(hypercollider_core PRIVATE "-framework Foundation")

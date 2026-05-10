@@ -1,5 +1,6 @@
 #include "preset_manager.h"
 #include <algorithm>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 
@@ -15,10 +16,9 @@ std::filesystem::path PresetManager::getUserPresetsDir() const {
         return std::filesystem::path(home) / "Library" / "Application Support" / "HCPlugin" / "presets";
     }
 #elif defined(_WIN32)
-    // Windows: %APPDATA%\HCPlugin\presets\
-    const char* appdata = std::getenv("APPDATA");
-    if (appdata) {
-        return std::filesystem::path(appdata) / "HCPlugin" / "presets";
+    // Windows: %APPDATA%/HCPlugin/presets/
+    if (const char* appDataEnv = std::getenv("APPDATA")) {
+        return std::filesystem::path(appDataEnv) / "HCPlugin" / "presets";
     }
 #else
     // Linux: ~/.local/share/HCPlugin/presets/
