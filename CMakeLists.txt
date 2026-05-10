@@ -100,6 +100,20 @@ if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
 endif()
 FetchContent_MakeAvailable(wamr)
 
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU" AND TARGET vmlib)
+    get_target_property(WAMR_VMLIB_LINK_LIBS vmlib LINK_LIBRARIES)
+    if(WAMR_VMLIB_LINK_LIBS)
+        list(REMOVE_ITEM WAMR_VMLIB_LINK_LIBS "-ldl" "dl")
+        set_property(TARGET vmlib PROPERTY LINK_LIBRARIES "${WAMR_VMLIB_LINK_LIBS}")
+    endif()
+
+    get_target_property(WAMR_VMLIB_INTERFACE_LINK_LIBS vmlib INTERFACE_LINK_LIBRARIES)
+    if(WAMR_VMLIB_INTERFACE_LINK_LIBS)
+        list(REMOVE_ITEM WAMR_VMLIB_INTERFACE_LINK_LIBS "-ldl" "dl")
+        set_property(TARGET vmlib PROPERTY INTERFACE_LINK_LIBRARIES "${WAMR_VMLIB_INTERFACE_LINK_LIBS}")
+    endif()
+endif()
+
 if(WIN32)
     set(WAMR_WIN_FILE "${wamr_SOURCE_DIR}/core/shared/platform/windows/win_file.c")
     if(EXISTS "${WAMR_WIN_FILE}")
@@ -299,7 +313,11 @@ target_link_libraries(hypercollider_core
 )
 
 # Platform-specific linking for WAMR
-target_link_libraries(hypercollider_core PRIVATE pthread ${CMAKE_DL_LIBS} m)
+set(HC_DL_LIBS ${CMAKE_DL_LIBS})
+if(WIN32)
+    set(HC_DL_LIBS "")
+endif()
+target_link_libraries(hypercollider_core PRIVATE pthread ${HC_DL_LIBS} m)
 
 if(APPLE)
     target_link_libraries(hypercollider_core PRIVATE "-framework Foundation")

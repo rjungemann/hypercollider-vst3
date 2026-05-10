@@ -45,7 +45,7 @@ target_include_directories(${CLAP_PLUGIN_NAME}
 target_link_libraries(${CLAP_PLUGIN_NAME}
     PRIVATE
         hypercollider_core
-        ${CMAKE_DL_LIBS}
+        ${HC_DL_LIBS}
 )
 
 # macOS-specific settings
